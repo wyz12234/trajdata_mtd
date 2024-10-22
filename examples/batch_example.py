@@ -12,7 +12,7 @@ def main():
     noise_hists = NoiseHistories()
 
     dataset = UnifiedDataset(
-        desired_data=["nusc_mini-mini_train"],
+        desired_data=["nusc_trainval-train", "nusc_trainval-train_val"],
         centric="agent",
         desired_dt=0.1,
         history_sec=(3.2, 3.2),
@@ -30,7 +30,7 @@ def main():
         num_workers=0,
         verbose=True,
         data_dirs={  # Remember to change this to match your filesystem!
-            "nusc_mini": "~/datasets/nuScenes",
+            "nusc_trainval": "~/behavior-generation-dataset/nuscenes",
         },
     )
 

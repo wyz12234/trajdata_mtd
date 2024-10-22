@@ -167,7 +167,7 @@ class UnifiedDataset(Dataset):
             self.cache_class = df_cache.DataFrameCache
 
         self.rebuild_cache: bool = rebuild_cache
-        self.cache_path: Path = Path(cache_location).expanduser().resolve()
+        self.cache_path: Path = Path(cache_location).expanduser().resolve() # ~/.unified_data_cache
         self.cache_path.mkdir(parents=True, exist_ok=True)
         self.env_cache: EnvCache = EnvCache(self.cache_path)
 
@@ -179,22 +179,29 @@ class UnifiedDataset(Dataset):
                 raster_map_params["map_size_px"] % 2 == 0
             ), "Patch parameter 'map_size_px' must be divisible by 2"
 
-        require_map_cache = require_map_cache or incl_raster_map
+        require_map_cache = require_map_cache or incl_raster_map # True
 
-        self.history_sec = history_sec
-        self.future_sec = future_sec
-        self.agent_interaction_distances = agent_interaction_distances
-        self.incl_robot_future = incl_robot_future
+        self.history_sec = history_sec # (3.0, 3.0)
+        self.future_sec = future_sec # (5.2, 5.2)
+        self.agent_interaction_distances = agent_interaction_distances # 50
+        self.incl_robot_future = incl_robot_future # False
 
-        self.incl_raster_map = incl_raster_map
+        self.incl_raster_map = incl_raster_map # True
         self.raster_map_params = (
             raster_map_params
             if raster_map_params is not None
             # Allowing for parallel map processing in case the user specifies num_workers.
             else {"px_per_m": raster_utils.DEFAULT_PX_PER_M, "num_workers": num_workers}
         )
+        # raster_map_params={
+        #         "px_per_m": int(1 / data_cfg.pixel_size), # 10 10个像素代表1米
+        #         "map_size_px": data_cfg.raster_size, # 224 地图大小
+        #         "return_rgb": False,
+        #         "offset_frac_xy": data_cfg.raster_center, # (-0.5, 0.0) 地图中心
+        #         "no_map_fill_value": data_cfg.no_map_fill_value, # -1.0
+        # }
 
-        self.incl_vector_map = incl_vector_map
+        self.incl_vector_map = incl_vector_map # True
         self.vector_map_params = (
             vector_map_params
             if vector_map_params is not None
@@ -216,28 +223,29 @@ class UnifiedDataset(Dataset):
         if self.desired_dt is not None:
             self.vector_map_params["desired_dt"] = desired_dt
 
-        self.only_types = None if only_types is None else set(only_types)
-        self.only_predict = None if only_predict is None else set(only_predict)
+        self.only_types = None if only_types is None else set(only_types) # [AgentType.VEHICLE 1]
+        self.only_predict = None if only_predict is None else set(only_predict) # [AgentType.VEHICLE 1]
         self.no_types = None if no_types is None else set(no_types)
-        self.state_format = state_format
-        self.obs_format = obs_format
-        self.standardize_data = standardize_data
-        self.standardize_derivatives = standardize_derivatives
+        self.state_format = state_format # "x,y,xd,yd,xdd,ydd,h"
+        self.obs_format = obs_format # "x,y,xd,yd,xdd,ydd,s,c"
+        self.standardize_data = standardize_data # True 
+        # 标准化所有数据，使得 (1) 当前时间步预测的智能体方向为 0，(2) 所有数据都是相对于预测智能体的当前位置制作的，(3) 智能体的航向值为 替换为它的 sin、cos 值。 默认为 True。
+        self.standardize_derivatives = standardize_derivatives # False 使代理速度和加速度相对于被预测的代理。
         self.augmentations = augmentations
         self.extras = extras
         self.transforms = transforms
         self.verbose = verbose
-        self.max_agent_num = max_agent_num
+        self.max_agent_num = max_agent_num # 21
         self.rank = rank
         self.max_neighbor_num = max_neighbor_num
         self.ego_only = ego_only
 
         # Create requested state types now so pickling works
         # (Needed for multiprocess dataloading)
-        self.np_state_type = NP_STATE_TYPES[state_format]
-        self.np_obs_type = NP_STATE_TYPES[obs_format]
-        self.torch_state_type = TORCH_STATE_TYPES[state_format]
-        self.torch_obs_type = TORCH_STATE_TYPES[obs_format]
+        self.np_state_type = NP_STATE_TYPES[state_format] #  "x,y,xd,yd,xdd,ydd,h"
+        self.np_obs_type = NP_STATE_TYPES[obs_format] # "x,y,xd,yd,xdd,ydd,s,c"
+        self.torch_state_type = TORCH_STATE_TYPES[state_format] # "x,y,xd,yd,xdd,ydd,h"
+        self.torch_obs_type = TORCH_STATE_TYPES[obs_format] # "x,y,xd,yd,xdd,ydd,s,c"
 
         # Ensuring scene description queries are all lowercase
         if self.scene_description_contains is not None:

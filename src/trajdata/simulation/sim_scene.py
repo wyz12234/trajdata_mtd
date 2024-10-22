@@ -52,6 +52,8 @@ class SimulationScene:
         self.agents: List[AgentMetadata] = filtering.agent_types(
             agents_present, self.dataset.no_types, self.dataset.only_types
         )
+        self.max_agent_num = 49
+        self.agents = self.agents[:self.max_agent_num]
 
         if len(self.agents) == 0:
             raise ValueError(

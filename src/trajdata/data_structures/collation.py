@@ -182,6 +182,7 @@ def raster_map_collate_fn_scene(
     max_agent_num: Optional[int] = None,
     pad_value: Any = np.nan,
 ) -> Tuple[Optional[Tensor], Optional[Tensor], Optional[Tensor]]:
+    
     if batch_elems[0].map_patches is None:
         return None, None, None, None
 
@@ -321,6 +322,7 @@ def agent_collate_fn(
     max_num_neighbors: int = num_neighbors_t.max().item()
 
     neighbor_types: List[Tensor] = list()
+    neighbor_indices: List[Tensor] = list()
     neighbor_histories: List[AgentObsTensor] = list()
     neighbor_history_extents: List[Tensor] = list()
     neighbor_futures: List[AgentObsTensor] = list()
@@ -395,6 +397,9 @@ def agent_collate_fn(
 
         neighbor_types.append(
             torch.as_tensor(elem.neighbor_types_np, dtype=torch.float)
+        )
+        neighbor_indices.append(
+            torch.as_tensor(elem.neighbor_indices_np, dtype=torch.float)
         )
 
         if elem.num_neighbors > 0:
@@ -585,6 +590,9 @@ def agent_collate_fn(
         neighbor_types_t: Tensor = pad_sequence(
             neighbor_types, batch_first=True, padding_value=-1
         )
+        neighbor_indices_t: Tensor = pad_sequence(
+            neighbor_indices, batch_first=True, padding_value=-1
+        )
 
         neighbor_histories_t: AgentObsTensor = (
             pad_sequence(neighbor_histories, batch_first=True, padding_value=np.nan)
@@ -633,6 +641,7 @@ def agent_collate_fn(
         )
     else:
         neighbor_types_t: Tensor = torch.full((batch_size, 0), np.nan)
+        neighbor_indices_t: Tensor = torch.full((batch_size, 0), np.nan)
 
         neighbor_histories_t: AgentObsTensor = torch.full(
             (batch_size, 0, max_neigh_history_len, agent_history_t.shape[-1]),
@@ -682,9 +691,15 @@ def agent_collate_fn(
 
     extras: Dict[str, Tensor] = {}
     for key in batch_elems[0].extras.keys():
-        extras[key] = _collate_data(
-            [batch_elem.extras[key] for batch_elem in batch_elems]
-        )
+        if key in ['closest_lane_point', 'full_fut_traj', 'full_fut_valid']:
+            closest_lane_points_list = [batch_elem.extras[key] for batch_elem in batch_elems]
+            extras[key] = pad_sequence(
+                closest_lane_points_list, batch_first=True, padding_value=np.nan
+            )
+        else:
+            extras[key] = _collate_data(
+                [batch_elem.extras[key] for batch_elem in batch_elems]
+            )
 
     batch = AgentBatch(
         data_idx=data_index_t,
@@ -706,6 +721,7 @@ def agent_collate_fn(
         neigh_hist_len=neighbor_history_lens_t,
         neigh_fut=neighbor_futures_t,
         neigh_fut_extents=neighbor_future_extents_t,
+        neigh_indices=neighbor_indices_t,
         neigh_fut_len=neighbor_future_lens_t,
         robot_fut=robot_future_t,
         robot_fut_len=robot_future_len,
@@ -778,7 +794,7 @@ def split_pad_crop(
 def scene_collate_fn(
     batch_elems: List[SceneBatchElement],
     return_dict: bool,
-    pad_format: str,
+    pad_format: str, # outside 
     batch_augments: Optional[List[BatchAugmentation]] = None,
 ) -> SceneBatch:
     batch_size: int = len(batch_elems)
@@ -977,9 +993,15 @@ def scene_collate_fn(
 
     extras: Dict[str, Tensor] = {}
     for key in batch_elems[0].extras.keys():
-        extras[key] = _collate_data(
-            [batch_elem.extras[key] for batch_elem in batch_elems]
-        )
+        if key in ['closest_lane_point', 'full_fut_traj', 'full_fut_valid']:
+            closest_lane_points_list = [batch_elem.extras[key] for batch_elem in batch_elems]
+            extras[key] = pad_sequence(
+                closest_lane_points_list, batch_first=True, padding_value=np.nan
+            )
+        else:
+            extras[key] = _collate_data(
+                [batch_elem.extras[key] for batch_elem in batch_elems]
+            )
 
     batch = SceneBatch(
         data_idx=data_index_t,

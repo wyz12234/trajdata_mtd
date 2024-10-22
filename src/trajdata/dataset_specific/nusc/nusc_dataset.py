@@ -32,11 +32,11 @@ class NuscDataset(RawDataset):
         # We're using the nuScenes prediction challenge split here.
         # See https://github.com/nutonomy/nuscenes-devkit/blob/master/python-sdk/nuscenes/eval/prediction/splits.py
         # for full details on how the splits are obtained below.
-        all_scene_splits: Dict[str, List[str]] = create_splits_scenes()
+        all_scene_splits: Dict[str, List[str]] = create_splits_scenes() # 分割数据集
 
         train_scenes: List[str] = deepcopy(all_scene_splits["train"])
-        all_scene_splits["train"] = train_scenes[NUM_IN_TRAIN_VAL:]
-        all_scene_splits["train_val"] = train_scenes[:NUM_IN_TRAIN_VAL]
+        all_scene_splits["train"] = train_scenes[NUM_IN_TRAIN_VAL:] # 500
+        all_scene_splits["train_val"] = train_scenes[:NUM_IN_TRAIN_VAL] # 200
 
         if env_name == "nusc_trainval":
             nusc_scene_splits: Dict[str, List[str]] = {

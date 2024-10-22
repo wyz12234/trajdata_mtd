@@ -100,7 +100,7 @@ class AgentBatchElement:
                 ]
             )
 
-        nearby_agents, self.neighbor_types_np = self.get_nearby_agents(
+        nearby_agents, self.neighbor_types_np, self.neighbor_indices_np = self.get_nearby_agents(
             scene_time_agent, agent_info, distance_limit
         )
 
@@ -163,6 +163,8 @@ class AgentBatchElement:
 
         # Will be optionally populated by the user's provided functions.
         self.extras: Dict[str, np.ndarray] = dict()
+        # save agent_info such that user function can also use it
+        self.agent_info = agent_info
 
     def get_agent_history(
         self,
@@ -210,16 +212,20 @@ class AgentBatchElement:
         nearby_agents: List[AgentMetadata] = [
             scene_time.agents[idx] for idx in nb_idx if nearby_mask[idx]
         ]
+        neighbor_indices_np = np.array([idx for idx in nb_idx if nearby_mask[idx]])
 
         if self.max_neighbor_num is not None:
             # Pruning nearby_agents and re-creating
             # neighbor_types_np with the remaining agents.
             nearby_agents = nearby_agents[: self.max_neighbor_num]
+            neighbor_indices_np = neighbor_indices_np[: self.max_neighbor_num]
 
         # Doing this here because the argsort above changes the order of agents.
         neighbor_types_np: np.ndarray = np.array([a.type.value for a in nearby_agents])
 
-        return nearby_agents, neighbor_types_np
+        for i, idx in enumerate(neighbor_indices_np):
+            assert np.all(scene_time.agents[idx].name==nearby_agents[i].name), "neighbor_indices_np is not correct"
+        return nearby_agents, neighbor_types_np, neighbor_indices_np
 
     def get_neighbor_history(
         self,
@@ -385,6 +391,12 @@ class SceneBatchElement:
                     [0.0, 0.0, 1.0],
                 ]
             )
+            # 旋转部分由 cos_agent 和 sin_agent 构成，
+            # 这两个参数分别是代理方向的余弦和正弦值。这个旋转矩阵用于根据代理的当前朝向调整坐标点的方向。
+            # 平移部分矩阵的最右列（agent_pos[0], agent_pos[1], 1.0）代表平移向量。
+            # 这表示将代理的局部原点平移到世界坐标系中的 agent_pos 位置（agent_pos[0], agent_pos[1]）。
+
+            # 逆矩阵
             self.centered_agent_from_world_tf: np.ndarray = np.linalg.inv(
                 self.centered_world_from_agent_tf
             )
@@ -458,6 +470,8 @@ class SceneBatchElement:
 
         # Will be optionally populated by the user's provided functions.
         self.extras: Dict[str, np.ndarray] = dict()
+        # save nearby_agents such that user function can also use it
+        self.nearby_agents = nearby_agents
 
     def get_nearby_agents(
         self,

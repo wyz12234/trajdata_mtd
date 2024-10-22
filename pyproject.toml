@@ -34,7 +34,7 @@ dependencies = [
     "protobuf==3.19.4",
     "scipy>=1.9.0",
     "opencv-python>=4.5.0",
-    "shapely>=2.0.0",
+    "shapely>=1.8.0",
 ]
 
 [project.optional-dependencies]

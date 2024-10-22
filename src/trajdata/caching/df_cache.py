@@ -592,7 +592,7 @@ class DataFrameCache(SceneCache):
 
         neighbor_futures_np = self._observation(
             neighbor_data_df.iloc[:, : self._state_dim].to_numpy()
-        )
+        ) # 转换成scene_centric
         # The last one will always be empty because of what cumsum returns.
         neighbor_futures: List[StateArray] = np.vsplit(
             neighbor_futures_np, neighbor_future_lens_np.cumsum()
